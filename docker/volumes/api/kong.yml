@@ -1,0 +1,169 @@
+_format_version: "2.1"
+services:
+  # Supabase Studio
+  - name: studio
+    url: http://studio:3000
+    routes:
+      - name: studio
+        strip_path: true
+        paths:
+          - /studio
+    plugins:
+      - name: cors
+
+  # Supabase Auth
+  - name: auth
+    url: http://auth:9999
+    routes:
+      - name: auth
+        strip_path: true
+        paths:
+          - /auth/v1
+    plugins:
+      - name: cors
+
+  # Supabase REST API
+  - name: rest
+    url: http://rest:3000
+    routes:
+      - name: rest
+        strip_path: true
+        paths:
+          - /rest/v1
+    plugins:
+      - name: cors
+
+  # Supabase Realtime
+  - name: realtime
+    url: http://realtime:4000
+    routes:
+      - name: realtime
+        strip_path: true
+        paths:
+          - /realtime/v1
+    plugins:
+      - name: cors
+
+  # Supabase Storage
+  - name: storage
+    url: http://storage:5000
+    routes:
+      - name: storage
+        strip_path: true
+        paths:
+          - /storage/v1
+    plugins:
+      - name: cors
+
+  # Supabase Edge Functions
+  - name: functions
+    url: http://functions:9000
+    routes:
+      - name: functions
+        strip_path: true
+        paths:
+          - /functions/v1
+    plugins:
+      - name: cors
+
+  # Supabase Meta
+  - name: meta
+    url: http://meta:8080
+    routes:
+      - name: meta
+        strip_path: true
+        paths:
+          - /pg/
+    plugins:
+      - name: key-auth
+        config:
+          hide_credentials: false
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - admin
+
+  ## Block access to /api/mcp
+  - name: mcp-blocker
+    _comment: 'Block direct access to /api/mcp'
+    url: http://studio:3000/api/mcp
+    routes:
+      - name: mcp-blocker-route
+        strip_path: true
+        paths:
+          - /api/mcp
+    plugins:
+      - name: request-termination
+        config:
+          status_code: 403
+          message: "Access is forbidden."
+
+  ## MCP endpoint - local access
+  - name: mcp
+    _comment: 'MCP: /mcp -> http://studio:3000/api/mcp (local access)'
+    url: http://studio:3000/api/mcp
+    routes:
+      - name: mcp
+        strip_path: true
+        paths:
+          - /mcp
+    plugins:
+      # Block access to /mcp by default
+      - name: request-termination
+        config:
+          status_code: 403
+          message: "Access is forbidden."
+      # Enable local access (danger zone!)
+      # 1. Comment out the 'request-termination' section above
+      # 2. Uncomment the entire section below, including 'deny'
+      # 3. Add your local IPs to the 'allow' list
+      #- name: cors
+      #- name: ip-restriction
+      #  config:
+      #    allow:
+      #      - 127.0.0.1
+      #      - ::1
+      #    deny: []
+
+  ## Protected Dashboard - catch all remaining routes
+  - name: dashboard
+    _comment: 'Studio: /* -> http://studio:3000/*'
+    url: http://studio:3000/
+    routes:
+      - name: dashboard-all
+        strip_path: true
+        paths:
+          - /
+    plugins:
+      - name: cors
+
+plugins:
+  - name: cors
+    config:
+      origins:
+        - http://localhost
+        - https://localhost
+        # add any additional domains here
+      methods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        - Date
+        - X-Auth-Token
+        - Authorization
+        - apikey
+        - x-requested-with
+      exposed_headers:
+        - X-Auth-Token
+      credentials: true
+      max_age: 3600
